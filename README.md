@@ -1,0 +1,3 @@
+# shell_scripts
+
+This Repository Contails the shell scripts which is useful for system admin....
