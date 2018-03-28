@@ -18,7 +18,7 @@ if (($?)); then
 }
 else
 {
-        tail /var/log/backup_RandD.log > /var/log/CVSRD.txt && mail -s "CVS_R&D RSYNC BACKUP is successfull($DATE)" admin@jvselectronics.in,noc_team@ahana.co.in < /var/log/CVSRD.txt
+        tail /var/log/backup_RandD.log > /var/log/CVSRD.txt && mail -s "CVS_R&D RSYNC BACKUP is successfull($DATE)" kalidossbtech@gmail.com < /var/log/CVSRD.txt
 #       tail backup_RandD.log > CVSRD.txt && mail -s "Test Mail" kalidossbtech@gmail.com < /var/log/CVSRD.txt
 }
 fi
