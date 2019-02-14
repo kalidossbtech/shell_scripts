@@ -1,0 +1,8 @@
+#!/bin/bash
+#Simple verification of Number script 
+read -p "type anything  : " VAR
+if [[ "${VAR}" =~ ^[0-9]+$ ]]; then
+        echo "$VAR is a Number"
+else
+        echo "$VAR is not a Number"
+fi
