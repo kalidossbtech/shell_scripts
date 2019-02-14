@@ -15,6 +15,7 @@ trap "ctrl_c" SIGINT
 read -p "Please choose option: " option
 if [ $option == 1 ];then
 echo "lxc begins to start the containers"
+#Here centos_1,centos_2,ubuntu_1,ubuntu_2 these are my container name
 for i in {centos_1,centos_2,ubuntu_1,ubuntu_2};do lxc-start --name $i -d; echo "$i started"; done; sleep 10; lxc-ls -f;
 fi
 
