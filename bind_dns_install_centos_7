@@ -21,10 +21,6 @@ if [[ "selinuxenabled" -eq 1 ]];then
 fi
 
 
-#function zone_setup {
-
-
-#}
 
 yum install epel-release deltarpm -y
 yum update -y
