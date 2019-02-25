@@ -1,0 +1,165 @@
+#!/bin/bash
+
+#Name	: kalidoss
+#E-mail : kalidossbtech@gmail.com
+#git repository  : https://github.com/kalidossbtech
+
+: '
+This script will install the DNS server bind in your server
+To run this script : ./bind_install.sh
+'
+
+if [[ "$UID" -ne 0 ]]; then
+  echo "Sorry, you need to run this as root"
+  exit 1
+fi
+
+if [[ "selinuxenabled" -eq 1 ]];then
+    echo 'Please disable selinux'
+    echo "change the configuration in /etc/selinux/config to 'selinux=disabled' "
+    exit 1
+fi
+
+
+#function zone_setup {
+
+
+#}
+
+yum install epel-release deltarpm -y
+yum update -y
+yum install curl lsof net-tools  -y 
+
+
+
+lsof -i :53 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo "It looks like another software is listnening on port 53:"
+  echo ""
+  lsof -i :53
+  echo ""
+  echo "Please disable or uninstall it before installing DNS server."
+  while [[ $CONTINUE != "y" && $CONTINUE != "n" ]]; do
+    read -rp "Do you still want to run the script? DNS might not work... [y/n]: " -e CONTINUE
+  done
+  if [[ "$CONTINUE" = "n" ]]; then
+    exit 2
+  fi
+fi
+
+PUBLIC_IP=$(curl http://icanhazip.com) > /dev/null 2>&1
+echo "Your Public IP is : $PUBLIC_IP"
+PRIVATE_IP=$(hostname -I)
+echo "Your Private IP is: $PRIVATE_IP"
+
+echo "If you are using multiple IP in LAN Please type 'no' and enter the IP "
+read -rp  "Are you ready to install with IP $PRIVATE_IP (y/n): " -e yn
+if [[ $yn = "y" ]]; then
+	DNS_IP=${PRIVATE_IP}
+ else
+	read -rp  "Pleas Enter IP of the Machine: " -e  ZIPADDR
+	DNS_IP=${ZIPADDR}
+fi
+ZONEIP_REVERSE=$(echo $DNS_IP | awk -F. '{OFS="."; print $3,$2,$1}')
+
+
+read -p  "Pleas Enter Zone Name (FQDN):   " ZONENAME
+
+read -p  "Pleas Enter One More Name for Server (ex. ns,server,etc.):   " OTHERNS
+
+function ZONE_CREATE {
+touch /var/named/$ZONENAME.zone
+
+#Forward zone creation
+cat << EOF >>  /var/named/forward.${ZONENAME}.zone
+\$TTL    86400
+@               IN        SOA         ${ZONENAME}.  root.${ZONENAME}(
+                                                           42              ; serial (d. adams)
+                                                           3H              ; refresh
+                                                           15M             ; retry
+                                                           1W              ; expiry
+                                                           1D )            ; minimum
+@                           IN       NS           ${ZONENAME}.
+@                           IN       A            ${DNS_IP}
+${OTHERNS}                  IN       A            ${DNS_IP}
+EOF
+
+#Reverse Zone Creation
+cat << EOF > /var/named/reverse.${ZONENAME}.zone
+\$TTL    86400
+@               IN      SOA     ${ZONENAME}.      root.${ZONENAME} (
+                                                         42              ; serial (d. dams)
+                                                         3H              ; refresh
+                                                         15M             ; retry
+                                                         1W              ; expiry
+                                                         1D )            ; minimum
+@                           IN       NS            ${ZONENAME}.
+@                           IN       A             ${DNS_IP}
+${ZONENAME}                 IN       PTR           ${DNS_IP}
+EOF
+
+
+chown named /var/named/reverse.${ZONENAME}.zone
+chown named /var/named/forward.${ZONENAME}.zone
+
+}
+
+
+
+function config {
+sed -i "s|listen-on port 53 { 127.0.0.1; };|listen-on port 53 { 127.0.0.1;$DNS_IP; };|" /etc/named.conf
+sed -i "s|allow-query     { localhost; };|allow-query     { any; };|" /etc/named.conf
+
+cat << EOF >> /etc//named.rfc1912.zones
+zone "${ZONENAME}" IN {
+        type master;
+        file "forward.${ZONENAME}.zone";
+};
+
+zone   "${ZONEIP_REVERSE}.in-addr.arpa"        {
+       type master;
+       file "reverse.${ZONENAME}.zone";
+ };
+
+
+
+EOF
+
+}
+
+
+
+
+: '
+
+'
+
+#read -rp  "Are you ready to install with IP $PRIVATE_IP (yes/no): " -e yn
+if [[ $yn = "y" ]]; then
+  
+   echo "installation Begins"
+   yum install bind bind-utils -y
+   if [[ $(systemctl is-active firewalld) == 'active' ]];then
+    echo 'Firewalld is active'
+   firewall-cmd --add-service=dns 
+   firewall-cmd --add-service=dns --permanent
+   fi
+
+   
+
+   #Start and enable the service
+   systemctl start named
+   systemctl enable named
+
+ZONE_CREATE
+config
+systemctl start named
+systemctl enable named
+
+  #ADD THE RESOLVER ADDRESS
+  echo "${ZIPADDR}" >> /etc/resolv.conf
+  echo "installation completed" 
+  
+else
+  echo "installation terminated"
+fi
