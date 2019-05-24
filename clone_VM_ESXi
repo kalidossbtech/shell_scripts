@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+#name	:	kalidoss
+#e-mail : kalidossbtech@gmail.com
+#git repository  : https://github.com/kalidossbtech
+
+#USAGE : sh clone_VM_ESXi.sh <Folder_you_wanna_clone>
+
+SOURCE_DIR=$1
+DEST_DIR=${SOURCE_DIR}_CLONE
+
+mkdir ${DEST_DIR}
+
+ARR_VMDK=$( ls ${SOURCE_DIR}/*.vmdk | grep -v 'delta' | grep -v 'flat' | cut -d/ -f 2 )
+
+for i in ${ARR_VMDK}; do
+   vmkfstools -d thin  -i  ${SOURCE_DIR}/${i}  ${DEST_DIR}/${i}
+done
+
+cp -rv ${SOURCE_DIR}/*.vmx ${DEST_DIR}/
+
